@@ -1,52 +1,59 @@
-from pandas_datareader import data as pdr
-from datetime import date
-import yfinance as yf
-yf.pdr_override()
+from pandas_datareader import data
+from pandas_datareader._utils import RemoteDataError
+import matplotlib.pyplot as plt
 import pandas as pd
-from yahoo_fin.stock_info import get_data
-import seaborn as sns
 import numpy as np
+from datetime import datetime
+
+START_DATE = '2020-01-01'
+END_DATE = str(datetime.now().strftime('%Y-%m,-%d'))
+
+UK_STOCK = 'UU.L'
+USA_STOCK = 'AMZN'
 
 
-# # Tickers list
-# # We can add and delete any ticker from the list to get desired ticker live data
-# ticker_list=['DJIA', 'DOW', 'LB', 'EXPE', 'PXD', 'MCHP', 'CRM', 'JEC' , 'NRG', 'HFC', 'NOW']
-# today = date.today()
-# # We can get data by our choice by giving days bracket
-# start_date= '2017–01–01'
-# end_date='2019–11–30'
-# files=[]
-# def getData(ticker):
-#     print (ticker)
-#     data = pdr.get_data_yahoo(ticker, start=start_date, end=today)
-#     dataname = ticker+'_'+str(today)
-#     files.append(dataname)
-#     SaveData(data, dataname)
-# # Create a data folder in your current dir.
-# def SaveData(df, filename):
-#     df.to_csv('./data/'+filename+'.csv')
-# #This loop will iterate over ticker list, will pass one ticker to get data, and save that data as file.
-#     for tik in ticker_list:
-#         getData(tik)
-#     for i in range(0,11):
-#         df1= pd.read_csv('./data/'+ str(files[i])+'.csv')
-#         print (df1.head())
-#
+def get_stats(stock_data):
+    return {
+        'last': np.mean(stock_data.tail(1)),
+        'short_mean': np.mean(stock_data.tail(20)),
+        'long_mean': np.mean(stock_data.tail(200)),
+        'short_rolling': stock_data.rolling(window=20).mean(),
+        'long_rolling': stock_data.rolling(window=200).mean()
+
+    }
 
 
+def clean_data(stock_data, col):
+    weekdays = pd.date_range(start=START_DATE, end=END_DATE)
+    clean_data = stock_data[col].reindex(weekdays)
+    return clean_data.fillna(method='ffill')
 
-amazon_weekly= get_data("amzn", start_date="12/04/2020", end_date="12/04/2021", index_as_date = True, interval="1wk")
-print(amazon_weekly)
 
-g = sns.jointplot(
-    data=amazon_weekly,
-    x="open", y="close", hue="ticker",
-    kind="kde",
-)
-sns.set_theme(style="ticks")
+def create_plot(stock_data, ticker):
+    stats = get_stats(stock_data)
+    plt.subplots(figsize=(12,8))
+    plt.plot(stock_data, label=ticker)
+    plt.plot(stats['short_rolling'], label='20 day rolling mean')
+    plt.plot(stats['long_rolling'], label='200 day rolling mean')
+    plt.xlabel('Date')
+    plt.ylabel('Adj Close (p)')
+    plt.legend()
+    plt.title('Stock Price over Time.')
 
-rs = np.random.RandomState(11)
-x = rs.gamma(2, size=1000)
-y = -.5 * x + rs.normal(size=1000)
+    plt.show()
 
-sns.jointplot(x=x, y=y, kind="hex", color="#4CB391")
+def get_data(ticker):
+    try:
+        stock_data = data.DataReader(ticker,
+                                     'yahoo',
+                                     START_DATE,
+                                     END_DATE)
+        adj_close = clean_data(stock_data, 'Adj Close')
+        create_plot(adj_close, ticker)
+
+
+    except RemoteDataError:
+        print('No data found for {t}'.format(t=ticker))
+
+
+get_data(USA_STOCK)
