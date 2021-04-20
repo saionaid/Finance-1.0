@@ -4,8 +4,10 @@ import yfinance as yf
 yf.pdr_override()
 import pandas as pd
 from yahoo_fin.stock_info import get_data
+import seaborn as sns
+import numpy as np
 
-#
+
 # # Tickers list
 # # We can add and delete any ticker from the list to get desired ticker live data
 # ticker_list=['DJIA', 'DOW', 'LB', 'EXPE', 'PXD', 'MCHP', 'CRM', 'JEC' , 'NRG', 'HFC', 'NOW']
@@ -33,5 +35,18 @@ from yahoo_fin.stock_info import get_data
 
 
 
-amazon_weekly= get_data("amzn", start_date="12/04/2018", end_date="12/04/2021", index_as_date = True, interval="1wk")
+amazon_weekly= get_data("amzn", start_date="12/04/2020", end_date="12/04/2021", index_as_date = True, interval="1wk")
 print(amazon_weekly)
+
+g = sns.jointplot(
+    data=amazon_weekly,
+    x="open", y="close", hue="ticker",
+    kind="kde",
+)
+sns.set_theme(style="ticks")
+
+rs = np.random.RandomState(11)
+x = rs.gamma(2, size=1000)
+y = -.5 * x + rs.normal(size=1000)
+
+sns.jointplot(x=x, y=y, kind="hex", color="#4CB391")
